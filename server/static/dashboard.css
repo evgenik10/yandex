@@ -1,0 +1,93 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1116;
+  --panel: #1a1f2b;
+  --text: #e7eaf0;
+  --muted: #8e96a7;
+  --accent: #58a6ff;
+  --danger: #ff6b6b;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar,
+.main,
+.camera,
+.map-box,
+.controls button,
+.status-bar span {
+  background: var(--panel);
+  border-radius: 10px;
+}
+
+.sidebar { padding: 18px; }
+#rover-list { list-style: none; padding: 0; }
+#rover-list li {
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+#rover-list li.active { border-color: var(--accent); }
+
+.main {
+  margin: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-bar span { padding: 8px 12px; font-weight: 600; }
+
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.controls button {
+  border: 1px solid #2a3142;
+  color: var(--text);
+  padding: 10px 14px;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+.camera {
+  min-height: 160px;
+  padding: 10px;
+}
+.camera h3 { margin: 0 0 8px 0; }
+.camera .stream {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.map-box {
+  min-height: 120px;
+  padding: 12px;
+  color: var(--muted);
+}
+
+.pdd-stop { color: var(--danger); }
+
+@media (max-width: 920px) {
+  body { grid-template-columns: 1fr; }
+  .sidebar { margin: 12px; }
+  .main { margin-top: 0; }
+}
