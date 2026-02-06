@@ -1,24 +1,7 @@
 const CAMERA_ORDER = ['front', 'rear', 'left', 'right'];
 const KEY_BINDINGS = { KeyW: 'FORWARD', KeyA: 'LEFT', KeyS: 'BACKWARD', KeyD: 'RIGHT', Space: 'STOP' };
 
-const mockState = {
-  items: [
-    {
-      id: 'rover-01',
-      ip_address: 'http://192.168.1.20:5000',
-      mode: 'AUTO',
-      pdd_state: 'ON_TRACK',
-      gps: { lat: 55.7512, lon: 37.6184 },
-      route: [[55.7512, 37.6184], [55.7521, 37.6196], [55.753, 37.6211]],
-      goal: { lat: 55.753, lon: 37.6211 },
-      streams: { front: 'Front', rear: 'Rear', left: 'Left', right: 'Right' },
-      connection: { online: true, checked_at: null, error: null },
-    },
-  ],
-};
-
 let selectedRover = null;
-let fetchEnabled = !window.location.protocol.startsWith('file');
 let map;
 let roverMarker;
 let routeLine;
@@ -29,54 +12,12 @@ function setSubtitle(text) {
 }
 
 async function apiFetch(path, options = {}) {
-  if (!fetchEnabled) return null;
-
-  try {
-    const response = await fetch(path, options);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } catch (_) {
-    fetchEnabled = false;
-    setSubtitle('API недоступен. Demo-режим включён.');
-    return null;
+  const response = await fetch(path, options);
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`HTTP ${response.status}: ${body || 'request failed'}`);
   }
-}
-
-function ensureLocalAssetsFallback() {
-  if (window.location.protocol !== 'file:') return;
-
-  document.querySelectorAll('link[href^="../static/"]').forEach((item) => {
-    item.href = item.href.replace('../static/', './static/');
-  });
-  document.querySelectorAll('script[src^="../static/"]').forEach((item) => {
-    item.src = item.src.replace('../static/', './static/');
-  });
-}
-
-function getMockRovers() {
-  return {
-    items: mockState.items.map(({ id, ip_address, mode, pdd_state, gps }) => ({ id, ip_address, mode, pdd_state, gps })),
-  };
-}
-
-function getMockStatus(roverId) {
-  return mockState.items.find((rover) => rover.id === roverId) || {};
-}
-
-function addMockRover(roverId, ipAddress) {
-  const exists = mockState.items.some((item) => item.id === roverId);
-  if (exists) return;
-  mockState.items.push({
-    id: roverId,
-    ip_address: ipAddress,
-    mode: 'MANUAL',
-    pdd_state: 'STOP',
-    gps: { lat: 55.75, lon: 37.61 },
-    route: [],
-    goal: null,
-    streams: { front: 'Front', rear: 'Rear', left: 'Left', right: 'Right' },
-    connection: { online: true, checked_at: null, error: null },
-  });
+  return response.json();
 }
 
 function renderRovers(data) {
@@ -138,8 +79,7 @@ function initMap() {
 
   map.on('click', async (event) => {
     if (!selectedRover) return;
-    const goal = { lat: event.latlng.lat, lon: event.latlng.lng };
-    await sendGoal(goal);
+    await sendGoal({ lat: event.latlng.lat, lon: event.latlng.lng });
   });
 }
 
@@ -161,11 +101,8 @@ function updateMap(status) {
   routeLine.setLatLngs(Array.isArray(status.route) ? status.route : []);
 
   if (goal && Number.isFinite(goal.lat) && Number.isFinite(goal.lon)) {
-    if (!goalMarker) {
-      goalMarker = L.marker([goal.lat, goal.lon]).addTo(map);
-    } else {
-      goalMarker.setLatLng([goal.lat, goal.lon]);
-    }
+    if (!goalMarker) goalMarker = L.marker([goal.lat, goal.lon]).addTo(map);
+    else goalMarker.setLatLng([goal.lat, goal.lon]);
   }
 
   map.panTo([lat, lon], { animate: true, duration: 0.5 });
@@ -174,6 +111,7 @@ function updateMap(status) {
 function renderStatus(status) {
   document.getElementById('rover-title').textContent = status.id || selectedRover || 'Rover';
   document.getElementById('mode-pill').textContent = `MODE: ${status.mode || '--'}`;
+
   const pdd = document.getElementById('pdd-pill');
   pdd.textContent = `PDD: ${status.pdd_state || '--'}`;
   pdd.classList.toggle('pill-stop', status.pdd_state === 'STOP');
@@ -191,11 +129,6 @@ function renderStatus(status) {
 async function sendCommand(type, payload = {}) {
   if (!selectedRover) return;
 
-  if (!fetchEnabled) {
-    setSubtitle(`Demo: ${type} для ${selectedRover}`);
-    return;
-  }
-
   await apiFetch(`/rovers/${selectedRover}/command`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -206,32 +139,17 @@ async function sendCommand(type, payload = {}) {
 async function sendGoal(goal) {
   if (!selectedRover) return;
 
-  if (!fetchEnabled) {
-    const rover = mockState.items.find((item) => item.id === selectedRover);
-    if (rover) rover.goal = goal;
-    setSubtitle(`Demo: цель ${goal.lat.toFixed(5)}, ${goal.lon.toFixed(5)} отправлена`);
-    await loadDashboard();
-    return;
-  }
-
   const response = await apiFetch(`/rovers/${selectedRover}/goal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(goal),
   });
+
   setSubtitle(`Цель отправлена: ${goal.lat.toFixed(5)}, ${goal.lon.toFixed(5)}${response?.forwarded ? ' (через IP API)' : ''}`);
 }
 
 async function createRover(roverId, ipAddress) {
   if (!roverId || !ipAddress) return;
-
-  if (!fetchEnabled) {
-    addMockRover(roverId, ipAddress);
-    selectedRover = roverId;
-    setSubtitle(`Demo: подключен ${roverId} (${ipAddress})`);
-    await loadDashboard();
-    return;
-  }
 
   const response = await apiFetch('/rovers/connect', {
     method: 'POST',
@@ -246,21 +164,14 @@ async function createRover(roverId, ipAddress) {
   }
 }
 
-
 async function checkConnection() {
   if (!selectedRover) return;
-
-  if (!fetchEnabled) {
-    setSubtitle(`Demo: проверка связи для ${selectedRover} — ONLINE`);
-    return;
-  }
 
   const response = await apiFetch(`/rovers/${selectedRover}/check_connection`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
 
-  if (!response) return;
   if (response.ok) {
     setSubtitle(
       response.connected
@@ -272,17 +183,21 @@ async function checkConnection() {
 }
 
 async function loadDashboard() {
-  const rovers = (await apiFetch('/rovers')) || getMockRovers();
-  renderRovers(rovers);
+  try {
+    const rovers = await apiFetch('/rovers');
+    renderRovers(rovers);
 
-  if (!selectedRover) {
-    setSubtitle('Нет активных роверов');
-    return;
+    if (!selectedRover) {
+      setSubtitle('Нет активных роверов');
+      return;
+    }
+
+    const status = await apiFetch(`/rovers/${selectedRover}/status`);
+    renderStatus(status || {});
+    setSubtitle('Синхронизация с REST API активна');
+  } catch (error) {
+    setSubtitle(`Ошибка API: ${error.message}`);
   }
-
-  const status = (await apiFetch(`/rovers/${selectedRover}/status`)) || getMockStatus(selectedRover);
-  renderStatus(status || {});
-  if (fetchEnabled) setSubtitle('Синхронизация с REST API активна');
 }
 
 function bindControls() {
@@ -314,13 +229,17 @@ function bindControls() {
     const roverId = idInput.value.trim();
     const ipAddress = ipInput.value.trim();
     if (!roverId || !ipAddress) return;
-    await createRover(roverId, ipAddress);
-    idInput.value = '';
-    ipInput.value = '';
+
+    try {
+      await createRover(roverId, ipAddress);
+      idInput.value = '';
+      ipInput.value = '';
+    } catch (error) {
+      setSubtitle(`Ошибка подключения: ${error.message}`);
+    }
   });
 }
 
-ensureLocalAssetsFallback();
 initMap();
 bindControls();
 loadDashboard();
