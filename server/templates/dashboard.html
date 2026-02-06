@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rovers Control Panel</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="../static/css/dashboard.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar glass">
+        <div class="sidebar-header">
+          <h1>Rovers</h1>
+          <p>Fleet command center</p>
+        </div>
+
+        <form id="add-rover-form" class="add-rover-form">
+          <input id="new-rover-id" type="text" placeholder="Новый ID (например rover-03)" required />
+          <button type="submit">+ Добавить</button>
+        </form>
+
+        <ul id="rover-list" class="rover-list"></ul>
+      </aside>
+
+      <main class="main-grid">
+        <section class="glass status-strip">
+          <div>
+            <h2 id="rover-title">Выберите ровер</h2>
+            <p id="subtitle">Режим ожидания...</p>
+          </div>
+          <div class="status-pills">
+            <span id="mode-pill" class="pill">MODE: --</span>
+            <span id="pdd-pill" class="pill">PDD: --</span>
+          </div>
+        </section>
+
+        <section class="glass cameras-card">
+          <h3>Камеры ровера</h3>
+          <div id="camera-grid" class="camera-grid"></div>
+        </section>
+
+        <section class="glass controls-card">
+          <h3>Управление</h3>
+          <div class="controls-grid">
+            <button data-cmd="FORWARD">↑</button>
+            <button data-cmd="LEFT">←</button>
+            <button data-cmd="STOP" class="danger">STOP</button>
+            <button data-cmd="RIGHT">→</button>
+            <button data-cmd="BACKWARD">↓</button>
+            <button id="auto-btn" class="accent">AUTO</button>
+            <button id="manual-btn" class="accent">MANUAL</button>
+          </div>
+          <p>Клавиатура: W / A / S / D + Space</p>
+        </section>
+
+        <section class="glass map-card">
+          <div class="map-head">
+            <h3>Маршрут и GPS</h3>
+            <span>Клик по карте = отправить цель</span>
+          </div>
+          <div id="map"></div>
+          <p id="route-status"></p>
+        </section>
+      </main>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="../static/js/dashboard.js"></script>
+  </body>
+</html>
