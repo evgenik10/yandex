@@ -108,7 +108,23 @@ button:hover { border-color: var(--accent); }
 .status-strip h2 { margin: 0; }
 .status-strip p { margin: 4px 0 0; color: var(--muted); }
 
-.status-pills { display: flex; gap: 8px; }
+
+.status-pills { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.pill-online {
+  border-color: #356a4f;
+  color: #9ef0c0;
+  background: #163326;
+}
+
+.pill-offline {
+  border-color: #7d4b32;
+  color: #ffc9a6;
+  background: #3a2318;
+}
+
+#check-conn-btn { padding: 7px 12px; }
+
 
 .pill {
   border: 1px solid var(--line);

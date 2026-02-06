@@ -12,35 +12,49 @@ class RoverStore:
     command_queues: Dict[str, List[Dict[str, Any]]] = field(default_factory=lambda: defaultdict(list))
     lock: Lock = field(default_factory=Lock)
 
+    def _base_rover(self, rover_id: str, ip_address: Optional[str] = None) -> Dict[str, Any]:
+        return {
+            "id": rover_id,
+            "mode": "MANUAL",
+            "pdd_state": "STOP",
+            "gps": {},
+            "streams": {
+                "front": "Front stream",
+                "rear": "Rear stream",
+                "left": "Left stream",
+                "right": "Right stream",
+            },
+            "route": [],
+            "goal": None,
+            "ip_address": ip_address,
+            "connection": {"online": False, "checked_at": None, "error": None},
+        }
+
     def create_rover(self, rover_id: str, ip_address: Optional[str] = None) -> Dict[str, Any]:
         with self.lock:
             if rover_id not in self.rovers:
-                self.rovers[rover_id] = {
-                    "id": rover_id,
-                    "mode": "MANUAL",
-                    "pdd_state": "STOP",
-                    "gps": {},
-                    "streams": {
-                        "front": "Front stream",
-                        "rear": "Rear stream",
-                        "left": "Left stream",
-                        "right": "Right stream",
-                    },
-                    "route": [],
-                    "goal": None,
-                    "ip_address": ip_address,
-                }
+                self.rovers[rover_id] = self._base_rover(rover_id, ip_address)
             elif ip_address:
                 self.rovers[rover_id]["ip_address"] = ip_address
             return self.rovers[rover_id]
 
     def upsert_status(self, rover_id: str, status: Dict[str, Any], ip_address: Optional[str] = None) -> None:
         with self.lock:
-            current = self.rovers.get(rover_id, {"id": rover_id})
+            current = self.rovers.get(rover_id, self._base_rover(rover_id, ip_address))
             merged = {**current, **status, "id": rover_id}
             if ip_address:
                 merged["ip_address"] = ip_address
             self.rovers[rover_id] = merged
+
+    def update_connection(self, rover_id: str, online: bool, checked_at: str, error_message: Optional[str] = None) -> None:
+        with self.lock:
+            rover = self.rovers.get(rover_id, self._base_rover(rover_id))
+            rover["connection"] = {
+                "online": online,
+                "checked_at": checked_at,
+                "error": error_message,
+            }
+            self.rovers[rover_id] = rover
 
     def list_rovers(self) -> List[Dict[str, Any]]:
         with self.lock:
@@ -51,6 +65,7 @@ class RoverStore:
                     "pdd_state": payload.get("pdd_state", "STOP"),
                     "gps": payload.get("gps", {}),
                     "ip_address": payload.get("ip_address"),
+                    "connection": payload.get("connection", {}),
                 }
                 for rover_id, payload in sorted(self.rovers.items())
             ]
@@ -62,15 +77,7 @@ class RoverStore:
     def set_goal(self, rover_id: str, goal: Dict[str, Any]) -> Dict[str, Any]:
         with self.lock:
             if rover_id not in self.rovers:
-                self.rovers[rover_id] = {
-                    "id": rover_id,
-                    "mode": "MANUAL",
-                    "pdd_state": "STOP",
-                    "gps": {},
-                    "streams": {},
-                    "route": [],
-                    "ip_address": None,
-                }
+                self.rovers[rover_id] = self._base_rover(rover_id)
             self.rovers[rover_id]["goal"] = goal
             return self.rovers[rover_id]
 

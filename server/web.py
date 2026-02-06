@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from urllib import error, request
 
 from flask import Flask, jsonify, render_template, request as flask_request
@@ -20,7 +21,7 @@ def _normalize_ip(ip_address: str) -> str:
     return f"http://{value.rstrip('/')}"
 
 
-def _forward_json(method: str, url: str, payload: dict | None = None) -> dict | None:
+def _forward_json(method: str, url: str, payload: dict | None = None) -> tuple[dict | None, str | None]:
     data = None
     headers = {}
     if payload is not None:
@@ -30,9 +31,24 @@ def _forward_json(method: str, url: str, payload: dict | None = None) -> dict | 
     try:
         with request.urlopen(req, timeout=1.5) as resp:
             raw = resp.read().decode("utf-8")
-            return json.loads(raw) if raw else {}
-    except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError):
-        return None
+            return (json.loads(raw) if raw else {}), None
+    except error.HTTPError as exc:
+        return None, f"HTTP {exc.code}"
+    except error.URLError as exc:
+        return None, str(exc.reason)
+    except (TimeoutError, json.JSONDecodeError):
+        return None, "timeout or bad response"
+
+
+def _check_rover_connection(rover_id: str, ip_address: str) -> tuple[bool, dict | None, str | None]:
+    status, err = _forward_json("GET", f"{ip_address}/status")
+    checked_at = datetime.now(timezone.utc).isoformat()
+    if isinstance(status, dict):
+        store.upsert_status(rover_id, status, ip_address=ip_address)
+        store.update_connection(rover_id, online=True, checked_at=checked_at)
+        return True, status, None
+    store.update_connection(rover_id, online=False, checked_at=checked_at, error_message=err)
+    return False, None, err
 
 
 @app.get("/")
@@ -65,12 +81,19 @@ def connect_rover():
         return jsonify({"ok": False, "error": "id and ip_address are required"}), 400
 
     rover = store.create_rover(rover_id, ip_address=ip_address)
-    remote_status = _forward_json("GET", f"{ip_address}/status")
-    if isinstance(remote_status, dict):
-        store.upsert_status(rover_id, remote_status, ip_address=ip_address)
-        rover = store.get_rover(rover_id)
+    connected, _, err = _check_rover_connection(rover_id, ip_address)
+    rover = store.get_rover(rover_id) or rover
+    return jsonify({"ok": True, "item": rover, "connected": connected, "error": err})
 
-    return jsonify({"ok": True, "item": rover, "connected": bool(remote_status)})
+
+@app.post("/rovers/<rover_id>/check_connection")
+def check_connection(rover_id: str):
+    rover = store.get_rover(rover_id)
+    ip_address = _normalize_ip(rover.get("ip_address") or "")
+    if not ip_address:
+        return jsonify({"ok": False, "connected": False, "error": "ip_address not configured"}), 400
+    connected, _, err = _check_rover_connection(rover_id, ip_address)
+    return jsonify({"ok": True, "connected": connected, "error": err, "item": store.get_rover(rover_id)})
 
 
 @app.get("/rovers/<rover_id>/status")
@@ -78,10 +101,8 @@ def rover_status(rover_id: str):
     rover = store.get_rover(rover_id)
     ip_address = rover.get("ip_address")
     if ip_address:
-        remote_status = _forward_json("GET", f"{ip_address}/status")
-        if isinstance(remote_status, dict):
-            store.upsert_status(rover_id, remote_status, ip_address=ip_address)
-            rover = store.get_rover(rover_id)
+        _check_rover_connection(rover_id, ip_address)
+        rover = store.get_rover(rover_id)
     return jsonify(rover)
 
 
@@ -107,7 +128,7 @@ def rover_command(rover_id: str):
     ip_address = rover.get("ip_address")
     forwarded = False
     if ip_address:
-        response = _forward_json("POST", f"{ip_address}/command", payload)
+        response, _ = _forward_json("POST", f"{ip_address}/command", payload)
         forwarded = response is not None
 
     return jsonify({"ok": True, "forwarded": forwarded})
@@ -123,7 +144,7 @@ def rover_goal(rover_id: str):
     ip_address = rover.get("ip_address")
     forwarded = False
     if ip_address:
-        response = _forward_json("POST", f"{ip_address}/goal", payload)
+        response, _ = _forward_json("POST", f"{ip_address}/goal", payload)
         forwarded = response is not None
 
     return jsonify({"ok": True, "forwarded": forwarded})

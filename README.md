@@ -83,6 +83,7 @@ requirements.txt
 - `POST /rovers/{id}/command` — команда управления
 - `POST /rovers/{id}/goal` — маршрут (GPS точки)
 - `POST /rovers/{id}/status` — heartbeat/состояние от ровера
+- `POST /rovers/{id}/check_connection` — ручная проверка связи с ровером по IP API
 - `GET /rovers/{id}/commands` — очередь команд для ровера
 
 ## 6) Запуск

@@ -12,6 +12,7 @@ const mockState = {
       route: [[55.7512, 37.6184], [55.7521, 37.6196], [55.753, 37.6211]],
       goal: { lat: 55.753, lon: 37.6211 },
       streams: { front: 'Front', rear: 'Rear', left: 'Left', right: 'Right' },
+      connection: { online: true, checked_at: null, error: null },
     },
   ],
 };
@@ -74,6 +75,7 @@ function addMockRover(roverId, ipAddress) {
     route: [],
     goal: null,
     streams: { front: 'Front', rear: 'Rear', left: 'Left', right: 'Right' },
+    connection: { online: true, checked_at: null, error: null },
   });
 }
 
@@ -176,6 +178,12 @@ function renderStatus(status) {
   pdd.textContent = `PDD: ${status.pdd_state || '--'}`;
   pdd.classList.toggle('pill-stop', status.pdd_state === 'STOP');
 
+  const conn = document.getElementById('conn-pill');
+  const online = Boolean(status.connection?.online);
+  conn.textContent = `CONN: ${online ? 'ONLINE' : 'OFFLINE'}`;
+  conn.classList.toggle('pill-online', online);
+  conn.classList.toggle('pill-offline', !online);
+
   renderCameras(status.streams || {});
   updateMap(status);
 }
@@ -238,6 +246,31 @@ async function createRover(roverId, ipAddress) {
   }
 }
 
+
+async function checkConnection() {
+  if (!selectedRover) return;
+
+  if (!fetchEnabled) {
+    setSubtitle(`Demo: проверка связи для ${selectedRover} — ONLINE`);
+    return;
+  }
+
+  const response = await apiFetch(`/rovers/${selectedRover}/check_connection`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response) return;
+  if (response.ok) {
+    setSubtitle(
+      response.connected
+        ? `Связь с ${selectedRover} успешна`
+        : `Связь с ${selectedRover} не установлена${response.error ? `: ${response.error}` : ''}`,
+    );
+    if (response.item) renderStatus(response.item);
+  }
+}
+
 async function loadDashboard() {
   const rovers = (await apiFetch('/rovers')) || getMockRovers();
   renderRovers(rovers);
@@ -263,6 +296,7 @@ function bindControls() {
 
   document.getElementById('auto-btn').addEventListener('click', () => sendCommand('set_mode', { mode: 'AUTO' }));
   document.getElementById('manual-btn').addEventListener('click', () => sendCommand('set_mode', { mode: 'MANUAL' }));
+  document.getElementById('check-conn-btn').addEventListener('click', checkConnection);
 
   window.addEventListener('keydown', async (event) => {
     const command = KEY_BINDINGS[event.code];
