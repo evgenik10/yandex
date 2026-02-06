@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rover Fleet Control</title>
+    <link rel="stylesheet" href="/static/dashboard.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <h1>Rovers</h1>
+      <ul id="rover-list"></ul>
+    </aside>
+
+    <main class="main">
+      <section class="status-bar">
+        <h2 id="rover-title">Выберите ровер</h2>
+        <span id="mode-pill">MODE: --</span>
+        <span id="pdd-pill">PDD: --</span>
+      </section>
+
+      <section class="controls">
+        <button data-cmd="FORWARD">↑</button>
+        <button data-cmd="LEFT">←</button>
+        <button data-cmd="STOP">■</button>
+        <button data-cmd="RIGHT">→</button>
+        <button data-cmd="BACKWARD">↓</button>
+        <button id="auto-btn">AUTO</button>
+        <button id="manual-btn">MANUAL</button>
+      </section>
+
+      <section class="camera-grid" id="camera-grid"></section>
+      <section class="map-box" id="map-box">Маршрут и трек: lat/lon + статус отклонения</section>
+    </main>
+
+    <script src="/static/dashboard.js"></script>
+  </body>
+</html>
