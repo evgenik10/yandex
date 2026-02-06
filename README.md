@@ -77,7 +77,8 @@ requirements.txt
 ## 5) REST API
 
 - `GET /rovers` — список всех роверов
-- `POST /rovers` — создать ровер по ID из панели
+- `POST /rovers` — создать ровер по ID (с опциональным `ip_address`)
+- `POST /rovers/connect` — подключить ровер по IP API
 - `GET /rovers/{id}/status` — текущий статус
 - `POST /rovers/{id}/command` — команда управления
 - `POST /rovers/{id}/goal` — маршрут (GPS точки)

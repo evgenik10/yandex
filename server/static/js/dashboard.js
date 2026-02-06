@@ -5,6 +5,7 @@ const mockState = {
   items: [
     {
       id: 'rover-01',
+      ip_address: 'http://192.168.1.20:5000',
       mode: 'AUTO',
       pdd_state: 'ON_TRACK',
       gps: { lat: 55.7512, lon: 37.6184 },
@@ -52,18 +53,21 @@ function ensureLocalAssetsFallback() {
 }
 
 function getMockRovers() {
-  return { items: mockState.items.map(({ id, mode, pdd_state, gps }) => ({ id, mode, pdd_state, gps })) };
+  return {
+    items: mockState.items.map(({ id, ip_address, mode, pdd_state, gps }) => ({ id, ip_address, mode, pdd_state, gps })),
+  };
 }
 
 function getMockStatus(roverId) {
   return mockState.items.find((rover) => rover.id === roverId) || {};
 }
 
-function addMockRover(roverId) {
+function addMockRover(roverId, ipAddress) {
   const exists = mockState.items.some((item) => item.id === roverId);
   if (exists) return;
   mockState.items.push({
     id: roverId,
+    ip_address: ipAddress,
     mode: 'MANUAL',
     pdd_state: 'STOP',
     gps: { lat: 55.75, lon: 37.61 },
@@ -80,7 +84,11 @@ function renderRovers(data) {
   data.items.forEach((rover) => {
     const li = document.createElement('li');
     li.className = `rover-item ${rover.id === selectedRover ? 'active' : ''}`;
-    li.innerHTML = `<strong>${rover.id}</strong><div class="rover-meta">${rover.mode || '--'} · ${rover.pdd_state || '--'}</div>`;
+    li.innerHTML = `
+      <strong>${rover.id}</strong>
+      <div class="rover-meta">${rover.mode || '--'} · ${rover.pdd_state || '--'}</div>
+      <div class="rover-meta">${rover.ip_address || 'ip: not set'}</div>
+    `;
     li.addEventListener('click', () => {
       selectedRover = rover.id;
       loadDashboard();
@@ -142,6 +150,7 @@ function updateMap(status) {
   document.getElementById('route-status').textContent =
     `GPS: ${Number.isFinite(lat) ? lat.toFixed(6) : '--'}, ${Number.isFinite(lon) ? lon.toFixed(6) : '--'} | ` +
     `Статус: ${status.pdd_state || '--'} | ` +
+    `API: ${status.ip_address || '--'} | ` +
     `Цель: ${goal ? `${goal.lat.toFixed(6)}, ${goal.lon.toFixed(6)}` : '--'}`;
 
   if (!map || !Number.isFinite(lat) || !Number.isFinite(lon)) return;
@@ -197,34 +206,34 @@ async function sendGoal(goal) {
     return;
   }
 
-  await apiFetch(`/rovers/${selectedRover}/goal`, {
+  const response = await apiFetch(`/rovers/${selectedRover}/goal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(goal),
   });
-  setSubtitle(`Цель отправлена: ${goal.lat.toFixed(5)}, ${goal.lon.toFixed(5)}`);
+  setSubtitle(`Цель отправлена: ${goal.lat.toFixed(5)}, ${goal.lon.toFixed(5)}${response?.forwarded ? ' (через IP API)' : ''}`);
 }
 
-async function createRover(roverId) {
-  if (!roverId) return;
+async function createRover(roverId, ipAddress) {
+  if (!roverId || !ipAddress) return;
 
   if (!fetchEnabled) {
-    addMockRover(roverId);
+    addMockRover(roverId, ipAddress);
     selectedRover = roverId;
-    setSubtitle(`Demo: создан ${roverId}`);
+    setSubtitle(`Demo: подключен ${roverId} (${ipAddress})`);
     await loadDashboard();
     return;
   }
 
-  const response = await apiFetch('/rovers', {
+  const response = await apiFetch('/rovers/connect', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: roverId }),
+    body: JSON.stringify({ id: roverId, ip_address: ipAddress }),
   });
 
   if (response?.ok) {
     selectedRover = roverId;
-    setSubtitle(`Ровер ${roverId} добавлен`);
+    setSubtitle(`Ровер ${roverId} подключен по API: ${ipAddress}${response.connected ? ' (online)' : ' (offline)'}`);
     await loadDashboard();
   }
 }
@@ -266,11 +275,14 @@ function bindControls() {
 
   document.getElementById('add-rover-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const input = document.getElementById('new-rover-id');
-    const roverId = input.value.trim();
-    if (!roverId) return;
-    await createRover(roverId);
-    input.value = '';
+    const idInput = document.getElementById('new-rover-id');
+    const ipInput = document.getElementById('new-rover-ip');
+    const roverId = idInput.value.trim();
+    const ipAddress = ipInput.value.trim();
+    if (!roverId || !ipAddress) return;
+    await createRover(roverId, ipAddress);
+    idInput.value = '';
+    ipInput.value = '';
   });
 }
 

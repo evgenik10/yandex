@@ -17,12 +17,13 @@
       <aside class="sidebar glass">
         <div class="sidebar-header">
           <h1>Rovers</h1>
-          <p>Fleet command center</p>
+          <p>Fleet command center · API by IP</p>
         </div>
 
         <form id="add-rover-form" class="add-rover-form">
           <input id="new-rover-id" type="text" placeholder="Новый ID (например rover-03)" required />
-          <button type="submit">+ Добавить</button>
+          <input id="new-rover-ip" type="text" placeholder="IP API (например 192.168.1.20:5000)" required />
+          <button type="submit">+ Подключить ровер</button>
         </form>
 
         <ul id="rover-list" class="rover-list"></ul>
