@@ -69,11 +69,15 @@ server/
   web.py
   api.py
   templates/dashboard.html
-
+  static/js/dashboard.js
+  static/css/dashboard.css
+requirements.txt
+```
 
 ## 5) REST API
 
 - `GET /rovers` — список всех роверов
+- `POST /rovers` — создать ровер по ID из панели
 - `GET /rovers/{id}/status` — текущий статус
 - `POST /rovers/{id}/command` — команда управления
 - `POST /rovers/{id}/goal` — маршрут (GPS точки)

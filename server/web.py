@@ -18,6 +18,16 @@ def list_rovers():
     return jsonify({"items": store.list_rovers()})
 
 
+@app.post("/rovers")
+def create_rover():
+    payload = request.get_json(silent=True) or {}
+    rover_id = (payload.get("id") or "").strip()
+    if not rover_id:
+        return jsonify({"ok": False, "error": "id is required"}), 400
+    rover = store.create_rover(rover_id)
+    return jsonify({"ok": True, "item": rover})
+
+
 @app.get("/rovers/<rover_id>/status")
 def rover_status(rover_id: str):
     return jsonify(store.get_rover(rover_id))
@@ -45,6 +55,7 @@ def rover_command(rover_id: str):
 @app.post("/rovers/<rover_id>/goal")
 def rover_goal(rover_id: str):
     payload = request.get_json(force=True)
+    store.set_goal(rover_id, payload)
     store.enqueue_command(rover_id, {"type": "route", "payload": payload})
     return jsonify({"ok": True})
 
