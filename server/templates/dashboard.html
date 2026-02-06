@@ -3,6 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        codex/create-autonomous-mini-rovers-system-t4gpt9
+    <title>Rovers Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="../static/css/dashboard.css" data-fallback-href="/static/css/dashboard.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar panel">
+        <h1>Rovers</h1>
+        <p class="subtitle">Fleet control panel</p>
+        <ul id="rover-list" class="rover-list"></ul>
+      </aside>
+
+      <main class="content">
+        <section class="panel topbar">
+          <div>
+            <h2 id="rover-title">Выберите ровер</h2>
+            <p id="rover-subtitle" class="muted">Ожидание данных...</p>
+          </div>
+          <div class="pills">
+            <span id="mode-pill" class="pill">MODE: --</span>
+            <span id="pdd-pill" class="pill">PDD: --</span>
+          </div>
+        </section>
+
+        <section class="panel cameras-section">
+          <h3>Камеры (2x2)</h3>
+          <div class="camera-grid" id="camera-grid"></div>
+        </section>
+
+        <section class="panel controls-section">
+          <h3>Управление</h3>
+          <div class="controls-grid">
+            <button data-cmd="FORWARD">↑</button>
+            <button data-cmd="LEFT">←</button>
+            <button data-cmd="STOP" class="danger">STOP</button>
+            <button data-cmd="RIGHT">→</button>
+            <button data-cmd="BACKWARD">↓</button>
+            <button id="auto-btn" class="secondary">AUTO</button>
+            <button id="manual-btn" class="secondary">MANUAL</button>
+          </div>
+          <p class="muted">Клавиатура: W/A/S/D + Space</p>
+        </section>
+
+        <section class="panel map-section">
+          <h3>Маршрут</h3>
+          <div id="map"></div>
+          <div id="route-status" class="muted"></div>
+        </section>
+      </main>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="../static/js/dashboard.js" data-fallback-src="/static/js/dashboard.js"></script>
+=======
     <title>Rover Fleet Control</title>
     <link rel="stylesheet" href="/static/dashboard.css" />
   </head>
@@ -34,5 +98,6 @@
     </main>
 
     <script src="/static/dashboard.js"></script>
+ main
   </body>
 </html>

@@ -69,10 +69,7 @@ server/
   web.py
   api.py
   templates/dashboard.html
-  static/dashboard.js
-  static/dashboard.css
-requirements.txt
-```
+
 
 ## 5) REST API
 
